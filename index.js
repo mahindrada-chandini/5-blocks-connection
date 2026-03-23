@@ -1,86 +1,60 @@
-'use strict';
+/*!
+ * encodeurl
+ * Copyright(c) 2016 Douglas Christopher Wilson
+ * MIT Licensed
+ */
 
-var assert = require('assert');
-var constaninople = require('../');
+'use strict'
 
-describe('isConstant(src)', function() {
-  it('handles "[5 + 3 + 10]"', function() {
-    assert(constaninople.isConstant('[5 + 3 + 10]') === true);
-  });
-  it('handles "/[a-z]/i.test(\'a\')"', function() {
-    assert(constaninople.isConstant("/[a-z]/i.test('a')") === true);
-  });
-  it("handles \"{'class': [('data')]}\"", function() {
-    assert(constaninople.isConstant("{'class': [('data')]}") === true);
-  });
-  it('handles "Math.random()"', function() {
-    assert(constaninople.isConstant('Math.random()') === false);
-  });
-  it('handles "Math.random("', function() {
-    assert(constaninople.isConstant('Math.random(') === false);
-  });
-  it('handles "Math.floor(10.5)" with {Math: Math} as constants', function() {
-    assert(constaninople.isConstant('Math.floor(10.5)', {Math: Math}) === true);
-  });
-  it('handles "this.myVar"', function() {
-    assert(constaninople.isConstant('this.myVar') === false);
-  });
-  it('handles "(function () { while (true); return 10; }())"', function() {
-    assert(
-      constaninople.isConstant(
-        '(function () { while (true); return 10; }())'
-      ) === false
-    );
-  });
-  it('handles "({}).toString.constructor("console.log(1)")()"', function() {
-    assert(
-      constaninople.isConstant(
-        '({}).toString.constructor("console.log(1)")()'
-      ) === false
-    );
-  });
-});
+/**
+ * Module exports.
+ * @public
+ */
 
-describe('toConstant(src)', function() {
-  it('handles "[5 + 3 + 10]"', function() {
-    assert.deepEqual(constaninople.toConstant('[5 + 3 + 10]'), [5 + 3 + 10]);
-  });
-  it('handles "/[a-z]/i.test(\'a\')"', function() {
-    assert(constaninople.toConstant("/[a-z]/i.test('a')") === true);
-  });
-  it("handles \"{'class': [('data')]}\"", function() {
-    assert.deepEqual(constaninople.toConstant("{'class': [('data')]}"), {
-      class: ['data'],
-    });
-  });
-  it('handles "Math.random()"', function() {
-    try {
-      constaninople.toConstant('Math.random()');
-    } catch (ex) {
-      return;
-    }
-    assert(false, 'Math.random() should result in an error');
-  });
-  it('handles "Math.random("', function() {
-    try {
-      constaninople.toConstant('Math.random(');
-    } catch (ex) {
-      return;
-    }
-    assert(false, 'Math.random( should result in an error');
-  });
-  it('handles "Math.floor(10.5)" with {Math: Math} as constants', function() {
-    assert(constaninople.toConstant('Math.floor(10.5)', {Math: Math}) === 10);
-  });
-  it('handles "(function () { while (true); return 10; }())"', function() {
-    try {
-      constaninople.toConstant('(function () { while (true); return 10; }())');
-    } catch (ex) {
-      return;
-    }
-    assert(
-      false,
-      '(function () { while (true); return 10; }()) should result in an error'
-    );
-  });
-});
+module.exports = encodeUrl
+
+/**
+ * RegExp to match non-URL code points, *after* encoding (i.e. not including "%")
+ * and including invalid escape sequences.
+ * @private
+ */
+
+var ENCODE_CHARS_REGEXP = /(?:[^\x21\x23-\x3B\x3D\x3F-\x5F\x61-\x7A\x7C\x7E]|%(?:[^0-9A-Fa-f]|[0-9A-Fa-f][^0-9A-Fa-f]|$))+/g
+
+/**
+ * RegExp to match unmatched surrogate pair.
+ * @private
+ */
+
+var UNMATCHED_SURROGATE_PAIR_REGEXP = /(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]|[\uD800-\uDBFF]([^\uDC00-\uDFFF]|$)/g
+
+/**
+ * String to replace unmatched surrogate pair with.
+ * @private
+ */
+
+var UNMATCHED_SURROGATE_PAIR_REPLACE = '$1\uFFFD$2'
+
+/**
+ * Encode a URL to a percent-encoded form, excluding already-encoded sequences.
+ *
+ * This function will take an already-encoded URL and encode all the non-URL
+ * code points. This function will not encode the "%" character unless it is
+ * not part of a valid sequence (`%20` will be left as-is, but `%foo` will
+ * be encoded as `%25foo`).
+ *
+ * This encode is meant to be "safe" and does not throw errors. It will try as
+ * hard as it can to properly encode the given URL, including replacing any raw,
+ * unpaired surrogate pairs with the Unicode replacement character prior to
+ * encoding.
+ *
+ * @param {string} url
+ * @return {string}
+ * @public
+ */
+
+function encodeUrl (url) {
+  return String(url)
+    .replace(UNMATCHED_SURROGATE_PAIR_REGEXP, UNMATCHED_SURROGATE_PAIR_REPLACE)
+    .replace(ENCODE_CHARS_REGEXP, encodeURI)
+}
