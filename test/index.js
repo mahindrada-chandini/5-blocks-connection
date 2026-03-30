@@ -1,80 +1,83 @@
 'use strict';
 
-var callBind = require('../');
-var bind = require('function-bind');
-var gOPD = require('gopd');
-var hasStrictMode = require('has-strict-mode')();
-var forEach = require('for-each');
-var inspect = require('object-inspect');
-var v = require('es-value-fixtures');
-
 var test = require('tape');
 
-/*
- * older engines have length nonconfigurable
- * in io.js v3, it is configurable except on bound functions, hence the .bind()
- */
-var functionsHaveConfigurableLengths = !!(
-	gOPD
-	&& Object.getOwnPropertyDescriptor
-	&& Object.getOwnPropertyDescriptor(bind.call(function () {}), 'length').configurable
-);
+var getSideChannel = require('../');
 
-test('callBind', function (t) {
-	forEach(v.nonFunctions, function (nonFunction) {
-		t['throws'](
-			function () { callBind(nonFunction); },
-			TypeError,
-			inspect(nonFunction) + ' is not a function'
-		);
-	});
+test('export', function (t) {
+	t.equal(typeof getSideChannel, 'function', 'is a function');
+	t.equal(getSideChannel.length, 0, 'takes no arguments');
 
-	var sentinel = { sentinel: true };
-	var func = function (a, b) {
-		// eslint-disable-next-line no-invalid-this
-		return [!hasStrictMode && this === global ? undefined : this, a, b];
-	};
-	t.equal(func.length, 2, 'original function length is 2');
-	t.deepEqual(func(), [undefined, undefined, undefined], 'unbound func with too few args');
-	t.deepEqual(func(1, 2), [undefined, 1, 2], 'unbound func with right args');
-	t.deepEqual(func(1, 2, 3), [undefined, 1, 2], 'unbound func with too many args');
+	var channel = getSideChannel();
+	t.ok(channel, 'is truthy');
+	t.equal(typeof channel, 'object', 'is an object');
 
-	var bound = callBind(func);
-	t.equal(bound.length, func.length + 1, 'function length is preserved', { skip: !functionsHaveConfigurableLengths });
-	t.deepEqual(bound(), [undefined, undefined, undefined], 'bound func with too few args');
-	t.deepEqual(bound(1, 2), [hasStrictMode ? 1 : Object(1), 2, undefined], 'bound func with right args');
-	t.deepEqual(bound(1, 2, 3), [hasStrictMode ? 1 : Object(1), 2, 3], 'bound func with too many args');
+	t.end();
+});
 
-	var boundR = callBind(func, sentinel);
-	t.equal(boundR.length, func.length, 'function length is preserved', { skip: !functionsHaveConfigurableLengths });
-	t.deepEqual(boundR(), [sentinel, undefined, undefined], 'bound func with receiver, with too few args');
-	t.deepEqual(boundR(1, 2), [sentinel, 1, 2], 'bound func with receiver, with right args');
-	t.deepEqual(boundR(1, 2, 3), [sentinel, 1, 2], 'bound func with receiver, with too many args');
+test('assert', function (t) {
+	var channel = getSideChannel();
+	t['throws'](
+		function () { channel.assert({}); },
+		TypeError,
+		'nonexistent value throws'
+	);
 
-	var boundArg = callBind(func, sentinel, 1);
-	t.equal(boundArg.length, func.length - 1, 'function length is preserved', { skip: !functionsHaveConfigurableLengths });
-	t.deepEqual(boundArg(), [sentinel, 1, undefined], 'bound func with receiver and arg, with too few args');
-	t.deepEqual(boundArg(2), [sentinel, 1, 2], 'bound func with receiver and arg, with right arg');
-	t.deepEqual(boundArg(2, 3), [sentinel, 1, 2], 'bound func with receiver and arg, with too many args');
+	var o = {};
+	channel.set(o, 'data');
+	t.doesNotThrow(function () { channel.assert(o); }, 'existent value noops');
 
-	t.test('callBind.apply', function (st) {
-		var aBound = callBind.apply(func);
-		st.deepEqual(aBound(sentinel), [sentinel, undefined, undefined], 'apply-bound func with no args');
-		st.deepEqual(aBound(sentinel, [1], 4), [sentinel, 1, undefined], 'apply-bound func with too few args');
-		st.deepEqual(aBound(sentinel, [1, 2], 4), [sentinel, 1, 2], 'apply-bound func with right args');
+	t.end();
+});
 
-		var aBoundArg = callBind.apply(func);
-		st.deepEqual(aBoundArg(sentinel, [1, 2, 3], 4), [sentinel, 1, 2], 'apply-bound func with too many args');
-		st.deepEqual(aBoundArg(sentinel, [1, 2], 4), [sentinel, 1, 2], 'apply-bound func with right args');
-		st.deepEqual(aBoundArg(sentinel, [1], 4), [sentinel, 1, undefined], 'apply-bound func with too few args');
+test('has', function (t) {
+	var channel = getSideChannel();
+	/** @type {unknown[]} */ var o = [];
 
-		var aBoundR = callBind.apply(func, sentinel);
-		st.deepEqual(aBoundR([1, 2, 3], 4), [sentinel, 1, 2], 'apply-bound func with receiver and too many args');
-		st.deepEqual(aBoundR([1, 2], 4), [sentinel, 1, 2], 'apply-bound func with receiver and right args');
-		st.deepEqual(aBoundR([1], 4), [sentinel, 1, undefined], 'apply-bound func with receiver and too few args');
+	t.equal(channel.has(o), false, 'nonexistent value yields false');
 
-		st.end();
-	});
+	channel.set(o, 'foo');
+	t.equal(channel.has(o), true, 'existent value yields true');
+
+	t.equal(channel.has('abc'), false, 'non object value non existent yields false');
+
+	channel.set('abc', 'foo');
+	t.equal(channel.has('abc'), true, 'non object value that exists yields true');
+
+	t.end();
+});
+
+test('get', function (t) {
+	var channel = getSideChannel();
+	var o = {};
+	t.equal(channel.get(o), undefined, 'nonexistent value yields undefined');
+
+	var data = {};
+	channel.set(o, data);
+	t.equal(channel.get(o), data, '"get" yields data set by "set"');
+
+	t.end();
+});
+
+test('set', function (t) {
+	var channel = getSideChannel();
+	var o = function () {};
+	t.equal(channel.get(o), undefined, 'value not set');
+
+	channel.set(o, 42);
+	t.equal(channel.get(o), 42, 'value was set');
+
+	channel.set(o, Infinity);
+	t.equal(channel.get(o), Infinity, 'value was set again');
+
+	var o2 = {};
+	channel.set(o2, 17);
+	t.equal(channel.get(o), Infinity, 'o is not modified');
+	t.equal(channel.get(o2), 17, 'o2 is set');
+
+	channel.set(o, 14);
+	t.equal(channel.get(o), 14, 'o is modified');
+	t.equal(channel.get(o2), 17, 'o2 is not modified');
 
 	t.end();
 });
