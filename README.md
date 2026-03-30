@@ -1,68 +1,87 @@
-# token-stream
+# with
 
-Take an array of token and produce a more useful API to give to a parser.
+Compile time `with` for strict mode JavaScript
 
-[![Build Status](https://img.shields.io/travis/pugjs/token-stream/master.svg)](https://travis-ci.org/pugjs/token-stream)
-[![Dependency Status](https://img.shields.io/david/pugjs/token-stream.svg)](https://david-dm.org/pugjs/token-stream)
-[![NPM version](https://img.shields.io/npm/v/token-stream.svg)](https://www.npmjs.org/package/token-stream)
+[![Build Status](https://img.shields.io/github/workflow/status/pugjs/with/Publish%20Canary/master?style=for-the-badge)](https://github.com/pugjs/with/actions?query=workflow%3A%22Publish+Canary%22)
+[![Rolling Versions](https://img.shields.io/badge/Rolling%20Versions-Enabled-brightgreen?style=for-the-badge)](https://rollingversions.com/pugjs/with)
+[![NPM version](https://img.shields.io/npm/v/with?style=for-the-badge)](https://www.npmjs.com/package/with)
 
 ## Installation
 
-    npm install token-stream
+    $ npm install with
 
 ## Usage
 
 ```js
-var TokenStream = require('token-stream');
+var addWith = require('with');
 
-var stream = new TokenStream([
-  'a',
-  'b',
-  'c',
-  'd'
-]);
-assert(stream.peek() === 'a');
-assert(stream.lookahead(0) == 'a');
-assert(stream.lookahead(1) == 'b');
+addWith('obj', 'console.log(a)');
+// => ';(function (console, a) {
+//       console.log(a)
+//     }("console" in obj ? obj.console :
+//                          typeof console!=="undefined" ? console : undefined,
+//       "a" in obj ? obj.a :
+//                    typeof a !== "undefined" ? a : undefined));'
 
-assert(stream.advance() === 'a');
-assert(stream.peek() === 'b');
-assert(stream.lookahead(0) == 'b');
-assert(stream.lookahead(1) == 'c');
-
-stream.defer('z');
-assert(stream.peek() === 'z');
-assert(stream.lookahead(0) == 'z');
-assert(stream.lookahead(1) == 'b');
-assert(stream.advance() === 'z');
-assert(stream.advance() === 'b');
-assert(stream.advance() === 'c');
-assert(stream.advance() === 'd');
-
-// an error is thrown if you try and advance beyond the end of the stream
-assert.throws(function () {
-  stream.advance();
-});
+addWith('obj', 'console.log(a)', ['console']);
+// => ';(function (console, a) {
+//       console.log(a)
+//     }("a" in obj ? obj.a :
+//                    typeof a !== "undefined" ? a : undefined));'
 ```
 
 ## API
 
-### stream.peek()
+### addWith(obj, src[, exclude])
 
-Gets and returns the next item in the stream without advancing the stream's position.
+The idea is that this is roughly equivallent to:
 
-### stream.advance()
+```js
+with (obj) {
+  src;
+}
+```
 
-Returns the next item in the stream and advances the stream by one item.
+There are a few differences though. For starters, assignments to variables will always remain contained within the with block.
 
-### stream.defer(token)
+e.g.
 
-Put a token on the start of the stream (useful if you need to back track after calling advance).
+```js
+var foo = 'foo';
+with ({}) {
+  foo = 'bar';
+}
+assert(foo === 'bar'); // => This fails for compile time with but passes for native with
 
-### stream.lookahead(index)
+var obj = {foo: 'foo'};
+with ({}) {
+  foo = 'bar';
+}
+assert(obj.foo === 'bar'); // => This fails for compile time with but passes for native with
+```
 
-Return the item at `index` position from the start of the stream, but don't advance the stream.  `stream.lookahead(0)` is equivalent to `stream.peek()`.
+It also makes everything be declared, so you can always do:
+
+```js
+if (foo === undefined)
+```
+
+instead of
+
+```js
+if (typeof foo === 'undefined')
+```
+
+This is not the case if foo is in `exclude`. If a variable is excluded, we ignore it entirely. This is useful if you know a variable will be global as it can lead to efficiency improvements.
+
+It is also safe to use in strict mode (unlike `with`) and it minifies properly (`with` disables virtually all minification).
+
+#### Parsing Errors
+
+with internally uses babylon to parse code passed to `addWith`. If babylon throws an error, probably due to a syntax error, `addWith` returns an error wrapping the babylon error, so you can
+retrieve location information. `error.component` is `"src"` if the error is in the body or `"obj"` if it's in the object part of the with expression. `error.babylonError` is
+the error thrown from babylon.
 
 ## License
 
-  MIT
+MIT
