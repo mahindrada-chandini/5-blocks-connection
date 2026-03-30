@@ -1,203 +1,168 @@
-# negotiator
+<!-- Coppied from root directory -->
 
-[![NPM Version][npm-image]][npm-url]
-[![NPM Downloads][downloads-image]][downloads-url]
-[![Node.js Version][node-version-image]][node-version-url]
-[![Build Status][github-actions-ci-image]][github-actions-ci-url]
-[![Test Coverage][coveralls-image]][coveralls-url]
+<a href="https://pugjs.org"><img src="https://cdn.rawgit.com/pugjs/pug-logo/eec436cee8fd9d1726d7839cbe99d1f694692c0c/SVG/pug-final-logo-_-colour-128.svg" height="200" align="right"></a>
+# Pug
 
-An HTTP content negotiator for Node.js
+Full documentation is at [pugjs.org](https://pugjs.org/)
+
+ Pug is a high performance template engine heavily influenced by [Haml](http://haml.info/)
+ and implemented with JavaScript for [Node.js](http://nodejs.org) and browsers. For bug reports,
+ feature requests and questions, [open an issue](https://github.com/pugjs/pug/issues/new).
+ For discussion join the [chat room](https://gitter.im/pugjs/pug).
+
+ You can test drive Pug online [here](https://pugjs.org/).
+
+ [![Build Status](https://img.shields.io/travis/pugjs/pug/master.svg?style=flat)](https://travis-ci.org/pugjs/pug)
+ [![Coverage Status](https://img.shields.io/coveralls/pugjs/pug/master.svg?style=flat)](https://coveralls.io/r/pugjs/pug?branch=master)
+ [![Dependency Status](https://david-dm.org/pugjs/pug/status.svg?path=packages/pug)](https://david-dm.org/pugjs/pug?path=packages/pug)
+ [![DevDependencies Status](https://david-dm.org/pugjs/pug/dev-status.svg?path=packages/pug)](https://david-dm.org/pugjs/pug?path=packages/pug&type=dev)
+ [![NPM version](https://img.shields.io/npm/v/pug.svg?style=flat)](https://www.npmjs.com/package/pug)
+ [![Join Gitter Chat](https://img.shields.io/badge/gitter-join%20chat%20%E2%86%92-brightgreen.svg?style=flat)](https://gitter.im/pugjs/pug?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+## Rename from "Jade"
+
+This project was formerly known as "Jade." However, it has been revealed to us that "Jade" is a registered trademark, and as a result a rename is needed. After some discussion among the maintainers, **"Pug"** has been chosen as the new name for this project. The next major version will carry "pug" as the package name.
+
+If your package or app currently uses `jade`, don't worry: we have secured permissions to continue to occupy that package name, although all new versions will be released under `pug`.
+
+Before the renaming, we had already begun working on an incompatible Jade 2.0.0. We have then made it so that this new major version bump will coincide with the rename to Pug. Therefore, upgrading from Jade to Pug will be the same process as upgrading any other package with a major version bump. Currently, Pug 2.0.0 is still under beta stage, and there are several syntactic differences we have deprecated and removed. Such differences are documented at [#2305](https://github.com/pugjs/pug/issues/2305).
+
+The website and documentation for Pug are still being updated, but if you are new to Pug, you should get started with the new syntax and install the Pug package on npm.
 
 ## Installation
 
-```sh
-$ npm install negotiator
+### Package
+
+via npm:
+
+```bash
+$ npm install pug
+```
+
+### Command Line
+
+After installing the latest version of [Node.js](http://nodejs.org/), install with:
+
+```bash
+$ npm install pug-cli -g
+```
+
+and run with
+
+```bash
+$ pug --help
+```
+
+## Syntax
+
+Pug is a clean, whitespace sensitive syntax for writing html.  Here is a simple example:
+
+```pug
+doctype html
+html(lang="en")
+  head
+    title= pageTitle
+    script(type='text/javascript').
+      if (foo) bar(1 + 5)
+  body
+    h1 Pug - node template engine
+    #container.col
+      if youAreUsingPug
+        p You are amazing
+      else
+        p Get on it!
+      p.
+        Pug is a terse and simple templating language with a
+        strong focus on performance and powerful features.
+```
+
+becomes
+
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Pug</title>
+    <script type="text/javascript">
+      if (foo) bar(1 + 5)
+    </script>
+  </head>
+  <body>
+    <h1>Pug - node template engine</h1>
+    <div id="container" class="col">
+      <p>You are amazing</p>
+      <p>Pug is a terse and simple templating language with a strong focus on performance and powerful features.</p>
+    </div>
+  </body>
+</html>
 ```
 
 ## API
 
-```js
-var Negotiator = require('negotiator')
-```
-
-### Accept Negotiation
+For full API, see [pugjs.org/api/reference.html](https://pugjs.org/api/reference.html)
 
 ```js
-availableMediaTypes = ['text/html', 'text/plain', 'application/json']
+var pug = require('pug');
 
-// The negotiator constructor receives a request object
-negotiator = new Negotiator(request)
+// compile
+var fn = pug.compile('string of pug', options);
+var html = fn(locals);
 
-// Let's say Accept header is 'text/html, application/*;q=0.2, image/jpeg;q=0.8'
+// render
+var html = pug.render('string of pug', merge(options, locals));
 
-negotiator.mediaTypes()
-// -> ['text/html', 'image/jpeg', 'application/*']
-
-negotiator.mediaTypes(availableMediaTypes)
-// -> ['text/html', 'application/json']
-
-negotiator.mediaType(availableMediaTypes)
-// -> 'text/html'
+// renderFile
+var html = pug.renderFile('filename.pug', merge(options, locals));
 ```
 
-You can check a working example at `examples/accept.js`.
+### Options
 
-#### Methods
+ - `filename`  Used in exceptions, and required when using includes
+ - `compileDebug`  When `false` no debug instrumentation is compiled
+ - `pretty`    Add pretty-indentation whitespace to output _(false by default)_
 
-##### mediaType()
+## Browser Support
 
-Returns the most preferred media type from the client.
+ The latest version of pug can be download for the browser in standalone form from [here](https://pugjs.org/js/pug.js).  It only supports the very latest browsers though, and is a large file.  It is recommended that you pre-compile your pug templates to JavaScript.
 
-##### mediaType(availableMediaType)
+ To compile a template for use on the client using the command line, do:
 
-Returns the most preferred media type from a list of available media types.
-
-##### mediaTypes()
-
-Returns an array of preferred media types ordered by the client preference.
-
-##### mediaTypes(availableMediaTypes)
-
-Returns an array of preferred media types ordered by priority from a list of
-available media types.
-
-### Accept-Language Negotiation
-
-```js
-negotiator = new Negotiator(request)
-
-availableLanguages = ['en', 'es', 'fr']
-
-// Let's say Accept-Language header is 'en;q=0.8, es, pt'
-
-negotiator.languages()
-// -> ['es', 'pt', 'en']
-
-negotiator.languages(availableLanguages)
-// -> ['es', 'en']
-
-language = negotiator.language(availableLanguages)
-// -> 'es'
+```bash
+$ pug --client --no-debug filename.pug
 ```
 
-You can check a working example at `examples/language.js`.
+which will produce `filename.js` containing the compiled template.
 
-#### Methods
+## Additional Resources
 
-##### language()
+Tutorials:
 
-Returns the most preferred language from the client.
+  - cssdeck interactive [Pug syntax tutorial](http://cssdeck.com/labs/learning-the-jade-templating-engine-syntax)
+  - cssdeck interactive [Pug logic tutorial](http://cssdeck.com/labs/jade-templating-tutorial-codecast-part-2)
+  - [Pug について。](https://gist.github.com/japboy/5402844) (A Japanese Tutorial)
 
-##### language(availableLanguages)
+Implementations in other languages:
 
-Returns the most preferred language from a list of available languages.
+  - [Larpug - Pug for Laravel](https://github.com/acidjazz/larpug)
+  - [php](https://github.com/pug-php/pug)
+  - [scala](https://scalate.github.io/scalate/documentation/scaml-reference.html)
+  - [ruby](https://github.com/slim-template/slim)
+  - [python](https://github.com/SyrusAkbary/pyjade)
+  - [java](https://github.com/neuland/jade4j)
 
-##### languages()
+Other:
 
-Returns an array of preferred languages ordered by the client preference.
-
-##### languages(availableLanguages)
-
-Returns an array of preferred languages ordered by priority from a list of
-available languages.
-
-### Accept-Charset Negotiation
-
-```js
-availableCharsets = ['utf-8', 'iso-8859-1', 'iso-8859-5']
-
-negotiator = new Negotiator(request)
-
-// Let's say Accept-Charset header is 'utf-8, iso-8859-1;q=0.8, utf-7;q=0.2'
-
-negotiator.charsets()
-// -> ['utf-8', 'iso-8859-1', 'utf-7']
-
-negotiator.charsets(availableCharsets)
-// -> ['utf-8', 'iso-8859-1']
-
-negotiator.charset(availableCharsets)
-// -> 'utf-8'
-```
-
-You can check a working example at `examples/charset.js`.
-
-#### Methods
-
-##### charset()
-
-Returns the most preferred charset from the client.
-
-##### charset(availableCharsets)
-
-Returns the most preferred charset from a list of available charsets.
-
-##### charsets()
-
-Returns an array of preferred charsets ordered by the client preference.
-
-##### charsets(availableCharsets)
-
-Returns an array of preferred charsets ordered by priority from a list of
-available charsets.
-
-### Accept-Encoding Negotiation
-
-```js
-availableEncodings = ['identity', 'gzip']
-
-negotiator = new Negotiator(request)
-
-// Let's say Accept-Encoding header is 'gzip, compress;q=0.2, identity;q=0.5'
-
-negotiator.encodings()
-// -> ['gzip', 'identity', 'compress']
-
-negotiator.encodings(availableEncodings)
-// -> ['gzip', 'identity']
-
-negotiator.encoding(availableEncodings)
-// -> 'gzip'
-```
-
-You can check a working example at `examples/encoding.js`.
-
-#### Methods
-
-##### encoding()
-
-Returns the most preferred encoding from the client.
-
-##### encoding(availableEncodings)
-
-Returns the most preferred encoding from a list of available encodings.
-
-##### encodings()
-
-Returns an array of preferred encodings ordered by the client preference.
-
-##### encodings(availableEncodings)
-
-Returns an array of preferred encodings ordered by priority from a list of
-available encodings.
-
-## See Also
-
-The [accepts](https://npmjs.org/package/accepts#readme) module builds on
-this module and provides an alternative interface, mime type validation,
-and more.
+  - [Emacs Mode](https://github.com/brianc/jade-mode)
+  - [Vim Syntax](https://github.com/digitaltoad/vim-pug)
+  - [TextMate Bundle](http://github.com/miksago/jade-tmbundle)
+  - [Coda/SubEtha syntax Mode](https://github.com/aaronmccall/jade.mode)
+  - [html2pug](https://github.com/donpark/html2jade) converter
+  - [pug2php](https://github.com/SE7ENSKY/jade2php) converter
+  - [Pug Server](https://github.com/ded/jade-server)  Ideal for building local prototypes apart from any application
+  - [pug-ruby](https://github.com/yivo/pug-ruby) gem: Allows to invoke Pug and Jade from Ruby
+  - [pug-rails](https://github.com/yivo/pug-rails) gem: Integrates Pug and Jade into your Rails application
 
 ## License
 
-[MIT](LICENSE)
-
-[npm-image]: https://img.shields.io/npm/v/negotiator.svg
-[npm-url]: https://npmjs.org/package/negotiator
-[node-version-image]: https://img.shields.io/node/v/negotiator.svg
-[node-version-url]: https://nodejs.org/en/download/
-[coveralls-image]: https://img.shields.io/coveralls/jshttp/negotiator/master.svg
-[coveralls-url]: https://coveralls.io/r/jshttp/negotiator?branch=master
-[downloads-image]: https://img.shields.io/npm/dm/negotiator.svg
-[downloads-url]: https://npmjs.org/package/negotiator
-[github-actions-ci-image]: https://img.shields.io/github/workflow/status/jshttp/negotiator/ci/master?label=ci
-[github-actions-ci-url]: https://github.com/jshttp/negotiator/actions/workflows/ci.yml
+MIT

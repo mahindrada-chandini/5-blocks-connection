@@ -12,8 +12,8 @@ var enabled = false;
 exports.disable = disable;
 function disable() {
   enabled = false;
-  Promise._37 = null;
-  Promise._87 = null;
+  Promise._onHandle = null;
+  Promise._onReject = null;
 }
 
 exports.enable = enable;
@@ -24,27 +24,27 @@ function enable(options) {
   var id = 0;
   var displayId = 0;
   var rejections = {};
-  Promise._37 = function (promise) {
+  Promise._onHandle = function (promise) {
     if (
-      promise._65 === 2 && // IS REJECTED
-      rejections[promise._51]
+      promise._state === 2 && // IS REJECTED
+      rejections[promise._rejectionId]
     ) {
-      if (rejections[promise._51].logged) {
-        onHandled(promise._51);
+      if (rejections[promise._rejectionId].logged) {
+        onHandled(promise._rejectionId);
       } else {
-        clearTimeout(rejections[promise._51].timeout);
+        clearTimeout(rejections[promise._rejectionId].timeout);
       }
-      delete rejections[promise._51];
+      delete rejections[promise._rejectionId];
     }
   };
-  Promise._87 = function (promise, err) {
-    if (promise._40 === 0) { // not yet handled
-      promise._51 = id++;
-      rejections[promise._51] = {
+  Promise._onReject = function (promise, err) {
+    if (promise._deferredState === 0) { // not yet handled
+      promise._rejectionId = id++;
+      rejections[promise._rejectionId] = {
         displayId: null,
         error: err,
         timeout: setTimeout(
-          onUnhandled.bind(null, promise._51),
+          onUnhandled.bind(null, promise._rejectionId),
           // For reference errors and type errors, this almost always
           // means the programmer made a mistake, so log them after just
           // 100ms
